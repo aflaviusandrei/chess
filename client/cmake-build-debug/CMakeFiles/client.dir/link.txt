@@ -1,0 +1,1 @@
+/usr/bin/c++  -g   CMakeFiles/client.dir/main.cpp.o  -o client   -L/home/flav/Documents/chess/client/SFML_LIBRARY_DIR  -Wl,-rpath,/home/flav/Documents/chess/client/SFML_LIBRARY_DIR:/usr/local/lib /usr/local/lib/libsfml-graphics.so.2.5.1 /usr/local/lib/libsfml-window.so.2.5.1 /usr/local/lib/libsfml-system.so.2.5.1 
