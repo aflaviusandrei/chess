@@ -1,0 +1,3 @@
+/home/flav/Documents/chess/server/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/home/flav/Documents/chess/server/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/flav/Documents/chess/server/cmake-build-debug/CMakeFiles/server.dir

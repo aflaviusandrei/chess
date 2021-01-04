@@ -1,0 +1,26 @@
+/opt/clion-2020.2.4/bin/cmake/linux/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" /home/flav/Documents/chess/server
+CMake Warning at /usr/local/lib/cmake/libmongocxx-3.6.2/libmongocxx-config.cmake:15 (message):
+  This CMake target is deprecated.  Use 'mongo::mongocxx_shared' instead.
+  Consult the example projects for further details.
+Call Stack (most recent call first):
+  CMakeLists.txt:6 (find_package)
+
+
+CMake Warning at /usr/local/lib/cmake/libbsoncxx-3.6.2/libbsoncxx-config.cmake:15 (message):
+  This CMake target is deprecated.  Use 'mongo::bsoncxx_shared' instead.
+  Consult the example projects for further details.
+Call Stack (most recent call first):
+  /usr/local/lib/cmake/libmongocxx-3.6.2/libmongocxx-config.cmake:22 (find_package)
+  CMakeLists.txt:6 (find_package)
+
+
+CMake Warning at /usr/local/lib/cmake/libbsoncxx-3.6.2/libbsoncxx-config.cmake:15 (message):
+  This CMake target is deprecated.  Use 'mongo::bsoncxx_shared' instead.
+  Consult the example projects for further details.
+Call Stack (most recent call first):
+  CMakeLists.txt:7 (find_package)
+
+
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/flav/Documents/chess/server/cmake-build-debug

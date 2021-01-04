@@ -82,7 +82,7 @@ int validatePawn(int origX, int origY, int destX, int destY, int side) {
 
 int validateQueen(int origX, int origY, int destX, int destY, int side) {
 
-    if (board[destX][destY].side == board[origX][origY].side) return 0;
+    if (board[destX][destY].hasPiece && board[destX][destY].side == board[origX][origY].side) return 0;
 
     if (origX != destX && origY != destY) {
         int cx = origX, cy = origY;
@@ -94,8 +94,15 @@ int validateQueen(int origX, int origY, int destX, int destY, int side) {
             if (cx < destX) cx++;
             else cx--;
 
-            if (board[cx][cy].hasPiece) return 0;
+            cout << "b" << endl;
+
+            if (board[cx][cy].hasPiece) {
+                cout << "Position " << cx << " " << cy << " has piece" << endl;
+                return 0;
+            }
         }
+
+        cout << "a" << endl;
 
         if (cx != destX || cy != destY) return 0;
     }
@@ -273,7 +280,7 @@ int isCheck() {
         if (ti >= 0) {
             while (!board[ti][k[x].j].hasPiece && ti > 0) ti--;
             if ((board[ti][k[x].j].type == "queen" || board[ti][k[x].j].type == "rook")
-                && board[ti][k[x].j].side != k[x].side) return 1;
+                && board[ti][k[x].j].side != k[x].side) return k[x].side;
         }
 
         // check south
@@ -281,7 +288,7 @@ int isCheck() {
         if (ti <= 7) {
             while (!board[ti][k[x].j].hasPiece && ti < 7) ti++;
             if ((board[ti][k[x].j].type == "queen" || board[ti][k[x].j].type == "rook")
-                && board[ti][k[x].j].side != k[x].side) return 1;
+                && board[ti][k[x].j].side != k[x].side) return k[x].side;
         }
 
         // check east
@@ -289,7 +296,7 @@ int isCheck() {
         if (tj <= 7) {
             while (!board[k[x].i][tj].hasPiece && tj < 7) tj++;
             if ((board[k[x].i][tj].type == "queen" || board[k[x].i][tj].type == "rook")
-                && board[k[x].i][tj].side != k[x].side) return 1;
+                && board[k[x].i][tj].side != k[x].side) return k[x].side;
         }
 
         // check west
@@ -297,7 +304,7 @@ int isCheck() {
         if (tj >= 0) {
             while (!board[k[x].i][tj].hasPiece && tj > 0) tj--;
             if ((board[k[x].i][tj].type == "queen" || board[k[x].i][tj].type == "rook")
-                && board[k[x].i][tj].side != k[x].side) return 1;
+                && board[k[x].i][tj].side != k[x].side) return k[x].side;
         }
     }
 
@@ -314,7 +321,7 @@ int isCheck() {
             }
 
             if (board[ti][tj].hasPiece) {
-                if ((board[ti][tj].type == "queen" || board[ti][tj].type == "bishop") && board[ti][tj].side != board[k[x].i][k[x].j].side) return 1;
+                if ((board[ti][tj].type == "queen" || board[ti][tj].type == "bishop") && board[ti][tj].side != board[k[x].i][k[x].j].side) return k[x].side;
             }
         }
 
@@ -329,7 +336,7 @@ int isCheck() {
             }
 
             if (board[ti][tj].hasPiece) {
-                if ((board[ti][tj].type == "queen" || board[ti][tj].type == "bishop") && board[ti][tj].side != board[k[x].i][k[x].j].side) return 1;
+                if ((board[ti][tj].type == "queen" || board[ti][tj].type == "bishop") && board[ti][tj].side != board[k[x].i][k[x].j].side) return k[x].side;
             }
         }
 
@@ -344,7 +351,7 @@ int isCheck() {
             }
 
             if (board[ti][tj].hasPiece) {
-                if ((board[ti][tj].type == "queen" || board[ti][tj].type == "bishop") && board[ti][tj].side != board[k[x].i][k[x].j].side) return 1;
+                if ((board[ti][tj].type == "queen" || board[ti][tj].type == "bishop") && board[ti][tj].side != board[k[x].i][k[x].j].side) return k[x].side;
             }
         }
 
@@ -359,7 +366,7 @@ int isCheck() {
             }
 
             if (board[ti][tj].hasPiece) {
-                if ((board[ti][tj].type == "queen" || board[ti][tj].type == "bishop") && board[ti][tj].side != board[k[x].i][k[x].j].side) return 1;
+                if ((board[ti][tj].type == "queen" || board[ti][tj].type == "bishop") && board[ti][tj].side != board[k[x].i][k[x].j].side) return k[x].side;
             }
         }
     }
@@ -370,11 +377,11 @@ int isCheck() {
         tj = k[x].j;
         if (k[x].side) {
             if ((board[ti - 1][tj - 1].hasPiece && board[ti - 1][tj - 1].type == "pawn" && board[ti - 1][tj - 1].side != board[ti][tj].side)
-                || (board[ti - 1][tj + 1].hasPiece && board[ti - 1][tj + 1].type == "pawn" && board[ti - 1][tj + 1].side != board[ti][tj].side)) return 1;
+                || (board[ti - 1][tj + 1].hasPiece && board[ti - 1][tj + 1].type == "pawn" && board[ti - 1][tj + 1].side != board[ti][tj].side)) return k[x].side;
         }
         else {
             if ((board[ti + 1][tj - 1].hasPiece && board[ti + 1][tj - 1].type == "pawn" && board[ti + 1][tj - 1].side != board[ti][tj].side)
-                || (board[ti + 1][tj + 1].hasPiece && board[ti + 1][tj + 1].type == "pawn" && board[ti + 1][tj + 1].side != board[ti][tj].side)) return 1;
+                || (board[ti + 1][tj + 1].hasPiece && board[ti + 1][tj + 1].type == "pawn" && board[ti + 1][tj + 1].side != board[ti][tj].side)) return k[x].side;
         }
     }
 
@@ -388,7 +395,7 @@ int isCheck() {
         if (ti >= 0 && ti <= 7 && tj >= 0 && tj <= 7) {
             if (board[ti][tj].hasPiece && board[ti][tj].type == "knight"
                 && board[ti][tj].side != board[k[x].i][k[x].j].side)
-                return 1;
+                return k[x].side;
         }
 
         ti = k[x].i;
@@ -398,7 +405,7 @@ int isCheck() {
         if (ti >= 0 && ti <= 7 && tj >= 0 && tj <= 7) {
             if (board[ti][tj].hasPiece && board[ti][tj].type == "knight"
                 && board[ti][tj].side != board[k[x].i][k[x].j].side)
-                return 1;
+                return k[x].side;
         }
 
         ti = k[x].i;
@@ -408,7 +415,7 @@ int isCheck() {
         if (ti >= 0 && ti <= 7 && tj >= 0 && tj <= 7) {
             if (board[ti][tj].hasPiece && board[ti][tj].type == "knight"
                 && board[ti][tj].side != board[k[x].i][k[x].j].side)
-                return 1;
+                return k[x].side;
         }
 
         ti = k[x].i;
@@ -418,7 +425,7 @@ int isCheck() {
         if (ti >= 0 && ti <= 7 && tj >= 0 && tj <= 7) {
             if (board[ti][tj].hasPiece && board[ti][tj].type == "knight"
                 && board[ti][tj].side != board[k[x].i][k[x].j].side)
-                return 1;
+                return k[x].side;
         }
 
         ti = k[x].i;
@@ -428,7 +435,7 @@ int isCheck() {
         if (ti >= 0 && ti <= 7 && tj >= 0 && tj <= 7) {
             if (board[ti][tj].hasPiece && board[ti][tj].type == "knight"
                 && board[ti][tj].side != board[k[x].i][k[x].j].side)
-                return 1;
+                return k[x].side;
         }
 
         ti = k[x].i;
@@ -438,7 +445,7 @@ int isCheck() {
         if (ti >= 0 && ti <= 7 && tj >= 0 && tj <= 7) {
             if (board[ti][tj].hasPiece && board[ti][tj].type == "knight"
                 && board[ti][tj].side != board[k[x].i][k[x].j].side)
-                return 1;
+                return k[x].side;
         }
 
         ti = k[x].i;
@@ -448,7 +455,7 @@ int isCheck() {
         if (ti >= 0 && ti <= 7 && tj >= 0 && tj <= 7) {
             if (board[ti][tj].hasPiece && board[ti][tj].type == "knight"
                 && board[ti][tj].side != board[k[x].i][k[x].j].side)
-                return 1;
+                return k[x].side;
         }
 
         ti = k[x].i;
@@ -458,15 +465,15 @@ int isCheck() {
         if (ti >= 0 && ti <= 7 && tj >= 0 && tj <= 7) {
             if (board[ti][tj].hasPiece && board[ti][tj].type == "knight"
                 && board[ti][tj].side != board[k[x].i][k[x].j].side)
-                return 1;
+                return k[x].side;
         }
     }
 
     // check for kings
 
-    if (abs(k[0].i - k[1].i) <= 1 && abs(k[0].j - k[1].j) <= 1) return 1;
+//    if (abs(k[0].i - k[1].i) <= 1 && abs(k[0].j - k[1].j) <= 1) return 1;
 
-    return 0;
+    return -1;
 }
 
 void repaint () {
@@ -624,8 +631,10 @@ void dropPiece(int mx, int my) {
             board[grabI][grabJ].side = -1;
             board[grabI][grabJ].type = "";
 
-            if (isCheck()) {
-                valid = 0;
+            int isc = isCheck();
+
+            if (isc != -1) {
+                if (isc == board[fi][fj].side) valid = 0;
             }
 
             board[grabI][grabJ].hasPiece = 1;
@@ -677,18 +686,18 @@ int main() {
     board[0][0].x = (w - bh) / 2;
     board[0][0].y = 0.3 * h / 2;
 
-    w_pawn.loadFromFile("/home/flav/Documents/Chess/client/assets/w_pawn.png");
-    w_king.loadFromFile("/home/flav/Documents/Chess/client/assets/w_king.png");
-    w_queen.loadFromFile("/home/flav/Documents/Chess/client/assets/w_queen.png");
-    w_rook.loadFromFile("/home/flav/Documents/Chess/client/assets/w_rook.png");
-    w_bishop.loadFromFile("/home/flav/Documents/Chess/client/assets/w_bishop.png");
-    w_knight.loadFromFile("/home/flav/Documents/Chess/client/assets/w_knight.png");
-    b_pawn.loadFromFile("/home/flav/Documents/Chess/client/assets/b_pawn.png");
-    b_king.loadFromFile("/home/flav/Documents/Chess/client/assets/b_king.png");
-    b_queen.loadFromFile("/home/flav/Documents/Chess/client/assets/b_queen.png");
-    b_rook.loadFromFile("/home/flav/Documents/Chess/client/assets/b_rook.png");
-    b_bishop.loadFromFile("/home/flav/Documents/Chess/client/assets/b_bishop.png");
-    b_knight.loadFromFile("/home/flav/Documents/Chess/client/assets/knight.png");
+    w_pawn.loadFromFile("/home/flav/Documents/chess/client/assets/w_pawn.png");
+    w_king.loadFromFile("/home/flav/Documents/chess/client/assets/w_king.png");
+    w_queen.loadFromFile("/home/flav/Documents/chess/client/assets/w_queen.png");
+    w_rook.loadFromFile("/home/flav/Documents/chess/client/assets/w_rook.png");
+    w_bishop.loadFromFile("/home/flav/Documents/chess/client/assets/w_bishop.png");
+    w_knight.loadFromFile("/home/flav/Documents/chess/client/assets/w_knight.png");
+    b_pawn.loadFromFile("/home/flav/Documents/chess/client/assets/b_pawn.png");
+    b_king.loadFromFile("/home/flav/Documents/chess/client/assets/b_king.png");
+    b_queen.loadFromFile("/home/flav/Documents/chess/client/assets/b_queen.png");
+    b_rook.loadFromFile("/home/flav/Documents/chess/client/assets/b_rook.png");
+    b_bishop.loadFromFile("/home/flav/Documents/chess/client/assets/b_bishop.png");
+    b_knight.loadFromFile("/home/flav/Documents/chess/client/assets/knight.png");
 
     // set up rectangle shape to draw board squares
     sf::RectangleShape rectangle(sf::Vector2f(sqh, sqh));
