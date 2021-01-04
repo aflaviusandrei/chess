@@ -9,7 +9,7 @@ sf::Texture w_pawn, b_pawn, w_king, b_king, w_queen, b_queen,
 
 sf::Cursor hand, arrow;
 
-int mousePressed = 0;
+int mousePressed = 0, screen = 0;
 
 struct piece {
     int type;
@@ -26,6 +26,12 @@ struct square {
     sf::Sprite sprite;
     sf::Texture texture;
     string type;
+};
+
+struct btn {
+    int x, y;
+    string type, content;
+    sf::RectangleShape rect;
 };
 
 // Basic board initialization
@@ -682,136 +688,174 @@ int main() {
     hand.loadFromSystem(sf::Cursor::Hand);
     arrow.loadFromSystem(sf::Cursor::Arrow);
 
-    // initalize x, y coordinates of first square
-    board[0][0].x = (w - bh) / 2;
-    board[0][0].y = 0.3 * h / 2;
-
-    w_pawn.loadFromFile("/home/flav/Documents/chess/client/assets/w_pawn.png");
-    w_king.loadFromFile("/home/flav/Documents/chess/client/assets/w_king.png");
-    w_queen.loadFromFile("/home/flav/Documents/chess/client/assets/w_queen.png");
-    w_rook.loadFromFile("/home/flav/Documents/chess/client/assets/w_rook.png");
-    w_bishop.loadFromFile("/home/flav/Documents/chess/client/assets/w_bishop.png");
-    w_knight.loadFromFile("/home/flav/Documents/chess/client/assets/w_knight.png");
-    b_pawn.loadFromFile("/home/flav/Documents/chess/client/assets/b_pawn.png");
-    b_king.loadFromFile("/home/flav/Documents/chess/client/assets/b_king.png");
-    b_queen.loadFromFile("/home/flav/Documents/chess/client/assets/b_queen.png");
-    b_rook.loadFromFile("/home/flav/Documents/chess/client/assets/b_rook.png");
-    b_bishop.loadFromFile("/home/flav/Documents/chess/client/assets/b_bishop.png");
-    b_knight.loadFromFile("/home/flav/Documents/chess/client/assets/knight.png");
-
-    // set up rectangle shape to draw board squares
-    sf::RectangleShape rectangle(sf::Vector2f(sqh, sqh));
-    rectangle.setFillColor(sf::Color::Black);
-    rectangle.setOutlineColor(sf::Color::Black);
-    rectangle.setOutlineThickness(2);
-
-    for (j = 1; j < 8; j++) {
-        board[0][j].x = board[0][j - 1].x + sqh;
-        board[0][j].y = board[0][j - 1].y;
+    if (screen == 0) {
+//        sf::String playerInput;
+//        sf::Text playerText;
+//        sf::Font MontserratRegular;
+//
+//        if (!MontserratRegular.loadFromFile("/home/flav/Documents/chess/client/fonts/Montserrat/Montserrat-Regular.ttf")) {
+//            cout << "error" << endl;
+//        }
+//
+//        playerText.setFont(MontserratRegular);
+//        playerText.setFillColor(sf::Color::White);
+//        playerText.setCharacterSize(24);
+//        playerText.setPosition(100, 100);
+//
+//        string letters[26] = {"a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z"};
+//
+//        btn registerBtn, loginBtn;
+//
+//        registerBtn.rect.setPosition((w/2) - 100, (h/2) - 200);
+//        registerBtn.rect
+//
+//        while (window.isOpen()) {
+//            window.clear();
+//            window.draw(playerText);
+//            sf::Event event;
+//            while (window.pollEvent(event)) {
+//                switch (event.type) {
+//                    case sf::Event::KeyPressed:
+//                        if (event.text.unicode == 59) {
+//                            if (playerInput.getSize()) {
+//                                playerInput.erase(playerInput.getSize() - 1, 1);
+//                                playerText.setString(playerInput);
+//                            }
+//                        }
+//                        else if (event.text.unicode >= 0 && event.text.unicode <= 25) {
+//                            playerInput += letters[event.text.unicode];
+//                            playerText.setString(playerInput);
+//                        }
+//                        cout << playerInput.toAnsiString() << endl;
+//                        break;
+//                    case sf::Event::Closed:
+//                        window.close();
+//                }
+//            }
+//            window.draw(playerText);
+//            window.display();
+//        }
     }
+    else if (screen == 1) {
 
-    for (i = 1; i < 8; i++) {
-        board[i][0].y = board[i - 1][0].y + sqh;
-        board[i][0].x = board[i - 1][0].x;
+    }
+    else if (screen == 2) {
+
+        // initalize x, y coordinates of first square
+        board[0][0].x = (w - bh) / 2;
+        board[0][0].y = 0.3 * h / 2;
+
+        w_pawn.loadFromFile("/home/flav/Documents/chess/client/assets/w_pawn.png");
+        w_king.loadFromFile("/home/flav/Documents/chess/client/assets/w_king.png");
+        w_queen.loadFromFile("/home/flav/Documents/chess/client/assets/w_queen.png");
+        w_rook.loadFromFile("/home/flav/Documents/chess/client/assets/w_rook.png");
+        w_bishop.loadFromFile("/home/flav/Documents/chess/client/assets/w_bishop.png");
+        w_knight.loadFromFile("/home/flav/Documents/chess/client/assets/w_knight.png");
+        b_pawn.loadFromFile("/home/flav/Documents/chess/client/assets/b_pawn.png");
+        b_king.loadFromFile("/home/flav/Documents/chess/client/assets/b_king.png");
+        b_queen.loadFromFile("/home/flav/Documents/chess/client/assets/b_queen.png");
+        b_rook.loadFromFile("/home/flav/Documents/chess/client/assets/b_rook.png");
+        b_bishop.loadFromFile("/home/flav/Documents/chess/client/assets/b_bishop.png");
+        b_knight.loadFromFile("/home/flav/Documents/chess/client/assets/knight.png");
+
+        // set up rectangle shape to draw board squares
+        sf::RectangleShape rectangle(sf::Vector2f(sqh, sqh));
+        rectangle.setFillColor(sf::Color::Black);
+        rectangle.setOutlineColor(sf::Color::Black);
+        rectangle.setOutlineThickness(2);
 
         for (j = 1; j < 8; j++) {
-            board[i][j].x = board[i][j - 1].x + sqh;
-            board[i][j].y = board[i][j - 1].y;
-        }
-    }
-
-    int fc, sc;
-
-    fc = rand() % 2;
-    if (fc) sc = 0;
-    else sc = 1;
-
-    if (fc) {
-        initSquare(0, 0, w_rook, "rook", 0, fc);
-        initSquare(0, 1, w_knight, "knight", 0, fc);
-        initSquare(0, 2, w_bishop, "bishop", 0, fc);
-        initSquare(0, 3, w_queen, "queen", 0, fc);
-        initSquare(0, 4, w_king, "king", 0, fc);
-        initSquare(0, 5, w_bishop, "bishop", 0, fc);
-        initSquare(0, 6, w_knight, "knight", 0, fc);
-        initSquare(0, 7, w_rook, "rook", 0, fc);
-
-        for (j = 0; j < 8; j++) {
-            initSquare(1, j, w_pawn, "pawn", 0, fc);
-        }
-    }
-    else {
-        initSquare(0, 0, b_rook, "rook", 0, fc);
-        initSquare(0, 1, b_knight, "knight", 0, fc);
-        initSquare(0, 2, b_bishop, "bishop", 0, fc);
-        initSquare(0, 3, b_queen, "queen", 0, fc);
-        initSquare(0, 4, b_king, "king", 0, fc);
-        initSquare(0, 5, b_bishop, "bishop", 0, fc);
-        initSquare(0, 6, b_knight, "knight", 0, fc);
-        initSquare(0, 7, b_rook, "rook", 0, fc);
-
-        for (j = 0; j < 8; j++) {
-            initSquare(1, j, b_pawn, "pawn", 0, fc);
-        }
-    }
-
-    if (sc) {
-        initSquare(7, 0, w_rook, "rook", 1, sc);
-        initSquare(7, 1, w_knight, "knight", 1, sc);
-        initSquare(7, 2, w_bishop, "bishop", 1, sc);
-        initSquare(7, 3, w_queen, "queen", 1, sc);
-        initSquare(7, 4, w_king, "king", 1, sc);
-        initSquare(7, 5, w_bishop, "bishop", 1, sc);
-        initSquare(7, 6, w_knight, "knight", 1, sc);
-        initSquare(7, 7, w_rook, "rook", 1, sc);
-
-        for (j = 0; j < 8; j++) {
-            initSquare(6, j, w_pawn, "pawn", 1, sc);
-        }
-    }
-    else {
-        initSquare(7, 0, b_rook, "rook", 1, sc);
-        initSquare(7, 1, b_knight, "knight", 1, sc);
-        initSquare(7, 2, b_bishop, "bishop", 1, sc);
-        initSquare(7, 3, b_queen, "queen", 1, sc);
-        initSquare(7, 4, b_king, "king", 1, sc);
-        initSquare(7, 5, b_bishop, "bishop", 1, sc);
-        initSquare(7, 6, b_knight, "knight", 1, sc);
-        initSquare(7, 7, b_rook, "rook", 1, sc);
-
-        for (j = 0; j < 8; j++) {
-            initSquare(6, j, b_pawn, "pawn", 1, sc);
-        }
-    }
-
-    while (window.isOpen()) {
-
-        window.clear();
-
-        int borw = 0;
-
-        // draw entire board
-        rectangle.setPosition(board[0][0].x, board[0][0].y);
-
-        window.draw(rectangle);
-
-        for (j = 1; j < 8; j++) {
-            rectangle.setPosition(board[0][j].x, board[0][j].y);
-
-            if (borw) rectangle.setFillColor(sf::Color(118, 150, 86));
-            else rectangle.setFillColor(sf::Color(238, 238, 210));
-
-            borw = !borw;
-
-            window.draw(rectangle);
+            board[0][j].x = board[0][j - 1].x + sqh;
+            board[0][j].y = board[0][j - 1].y;
         }
 
         for (i = 1; i < 8; i++) {
-            rectangle.setPosition(board[i][0].x, board[i][0].y);
+            board[i][0].y = board[i - 1][0].y + sqh;
+            board[i][0].x = board[i - 1][0].x;
+
+            for (j = 1; j < 8; j++) {
+                board[i][j].x = board[i][j - 1].x + sqh;
+                board[i][j].y = board[i][j - 1].y;
+            }
+        }
+
+        int fc, sc;
+
+        fc = rand() % 2;
+        if (fc) sc = 0;
+        else sc = 1;
+
+        if (fc) {
+            initSquare(0, 0, w_rook, "rook", 0, fc);
+            initSquare(0, 1, w_knight, "knight", 0, fc);
+            initSquare(0, 2, w_bishop, "bishop", 0, fc);
+            initSquare(0, 3, w_queen, "queen", 0, fc);
+            initSquare(0, 4, w_king, "king", 0, fc);
+            initSquare(0, 5, w_bishop, "bishop", 0, fc);
+            initSquare(0, 6, w_knight, "knight", 0, fc);
+            initSquare(0, 7, w_rook, "rook", 0, fc);
+
+            for (j = 0; j < 8; j++) {
+                initSquare(1, j, w_pawn, "pawn", 0, fc);
+            }
+        }
+        else {
+            initSquare(0, 0, b_rook, "rook", 0, fc);
+            initSquare(0, 1, b_knight, "knight", 0, fc);
+            initSquare(0, 2, b_bishop, "bishop", 0, fc);
+            initSquare(0, 3, b_queen, "queen", 0, fc);
+            initSquare(0, 4, b_king, "king", 0, fc);
+            initSquare(0, 5, b_bishop, "bishop", 0, fc);
+            initSquare(0, 6, b_knight, "knight", 0, fc);
+            initSquare(0, 7, b_rook, "rook", 0, fc);
+
+            for (j = 0; j < 8; j++) {
+                initSquare(1, j, b_pawn, "pawn", 0, fc);
+            }
+        }
+
+        if (sc) {
+            initSquare(7, 0, w_rook, "rook", 1, sc);
+            initSquare(7, 1, w_knight, "knight", 1, sc);
+            initSquare(7, 2, w_bishop, "bishop", 1, sc);
+            initSquare(7, 3, w_queen, "queen", 1, sc);
+            initSquare(7, 4, w_king, "king", 1, sc);
+            initSquare(7, 5, w_bishop, "bishop", 1, sc);
+            initSquare(7, 6, w_knight, "knight", 1, sc);
+            initSquare(7, 7, w_rook, "rook", 1, sc);
+
+            for (j = 0; j < 8; j++) {
+                initSquare(6, j, w_pawn, "pawn", 1, sc);
+            }
+        }
+        else {
+            initSquare(7, 0, b_rook, "rook", 1, sc);
+            initSquare(7, 1, b_knight, "knight", 1, sc);
+            initSquare(7, 2, b_bishop, "bishop", 1, sc);
+            initSquare(7, 3, b_queen, "queen", 1, sc);
+            initSquare(7, 4, b_king, "king", 1, sc);
+            initSquare(7, 5, b_bishop, "bishop", 1, sc);
+            initSquare(7, 6, b_knight, "knight", 1, sc);
+            initSquare(7, 7, b_rook, "rook", 1, sc);
+
+            for (j = 0; j < 8; j++) {
+                initSquare(6, j, b_pawn, "pawn", 1, sc);
+            }
+        }
+
+        while (window.isOpen()) {
+
+            window.clear();
+
+            int borw = 0;
+
+            // draw entire board
+            rectangle.setPosition(board[0][0].x, board[0][0].y);
 
             window.draw(rectangle);
+
             for (j = 1; j < 8; j++) {
-                rectangle.setPosition(board[i][j].x, board[i][j].y);
+                rectangle.setPosition(board[0][j].x, board[0][j].y);
 
                 if (borw) rectangle.setFillColor(sf::Color(118, 150, 86));
                 else rectangle.setFillColor(sf::Color(238, 238, 210));
@@ -820,44 +864,60 @@ int main() {
 
                 window.draw(rectangle);
             }
-        }
 
-        for (i = 0; i < 8; i++)
-            for (j = 0; j < 8; j++) {
-                board[i][j].sprite.setPosition(
-                        board[i][j].sx,
-                        board[i][j].sy
-                );
-            }
+            for (i = 1; i < 8; i++) {
+                rectangle.setPosition(board[i][0].x, board[i][0].y);
 
-        for (i = 0; i < 8; i++)
-            for (j = 0; j < 8; j++) {
-                if (board[i][j].hasPiece) {
-                    window.draw(board[i][j].sprite);
+                window.draw(rectangle);
+                for (j = 1; j < 8; j++) {
+                    rectangle.setPosition(board[i][j].x, board[i][j].y);
+
+                    if (borw) rectangle.setFillColor(sf::Color(118, 150, 86));
+                    else rectangle.setFillColor(sf::Color(238, 238, 210));
+
+                    borw = !borw;
+
+                    window.draw(rectangle);
                 }
             }
 
-        sf::Event event;
-        while (window.pollEvent(event)) {
-            switch (event.type) {
-                case sf::Event::MouseButtonPressed:
-                    repaint();
-                    mousePressed = 1;
-                    grabPiece(sf::Mouse::getPosition(window).x, sf::Mouse::getPosition(window).y);
-                    break;
-                case sf::Event::MouseButtonReleased:
-                    dropPiece(sf::Mouse::getPosition(window).x, sf::Mouse::getPosition(window).y);
-                    mousePressed = 0;
-                    break;
-                case sf::Event::MouseMoved:
-                    movePiece(sf::Mouse::getPosition(window).x, sf::Mouse::getPosition(window).y);
-                    break;
-                case sf::Event::Closed:
-                    window.close();
-            }
-        }
+            for (i = 0; i < 8; i++)
+                for (j = 0; j < 8; j++) {
+                    board[i][j].sprite.setPosition(
+                            board[i][j].sx,
+                            board[i][j].sy
+                    );
+                }
 
-        window.display();
+            for (i = 0; i < 8; i++)
+                for (j = 0; j < 8; j++) {
+                    if (board[i][j].hasPiece) {
+                        window.draw(board[i][j].sprite);
+                    }
+                }
+
+            sf::Event event;
+            while (window.pollEvent(event)) {
+                switch (event.type) {
+                    case sf::Event::MouseButtonPressed:
+                        repaint();
+                        mousePressed = 1;
+                        grabPiece(sf::Mouse::getPosition(window).x, sf::Mouse::getPosition(window).y);
+                        break;
+                    case sf::Event::MouseButtonReleased:
+                        dropPiece(sf::Mouse::getPosition(window).x, sf::Mouse::getPosition(window).y);
+                        mousePressed = 0;
+                        break;
+                    case sf::Event::MouseMoved:
+                        movePiece(sf::Mouse::getPosition(window).x, sf::Mouse::getPosition(window).y);
+                        break;
+                    case sf::Event::Closed:
+                        window.close();
+                }
+            }
+
+            window.display();
+        }
     }
 
     return 0;
