@@ -1,6 +1,12 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
 #include <utility>
+#include <stdio.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <string.h>
+#define PORT 8888
 
 using namespace std;
 
@@ -9,7 +15,7 @@ sf::Texture w_pawn, b_pawn, w_king, b_king, w_queen, b_queen,
 
 sf::Cursor hand, arrow;
 
-int mousePressed = 0, screen = 0;
+int mousePressed = 0, screen = 1;
 
 struct piece {
     int type;
@@ -687,6 +693,36 @@ int main() {
 
     hand.loadFromSystem(sf::Cursor::Hand);
     arrow.loadFromSystem(sf::Cursor::Arrow);
+
+    int sock = 0, valread;
+    struct sockaddr_in serv_addr;
+    char *hello = "Hello from client";
+    char buffer[1024] = {0};
+    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    {
+        cout << "Socket creation error" << endl;
+        return -1;
+    }
+
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(PORT);
+
+    // Convert IPv4 and IPv6 addresses from text to binary form
+    if(inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr)<=0)
+    {
+        cout << "Invalid address not suported" << endl;
+        return -1;
+    }
+
+    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+    {
+        cout << "Connection failed" << endl;
+        return -1;
+    }
+    send(sock , hello , strlen(hello) , 0 );
+    cout << "Hello message sent" << endl;
+    valread = read( sock , buffer, 1024);
+    cout << buffer << endl;
 
     if (screen == 0) {
 //        sf::String playerInput;

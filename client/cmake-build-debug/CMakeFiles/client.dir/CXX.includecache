@@ -13,4 +13,14 @@ iostream
 -
 utility
 -
+stdio.h
+-
+sys/socket.h
+-
+arpa/inet.h
+-
+unistd.h
+-
+string.h
+-
 
