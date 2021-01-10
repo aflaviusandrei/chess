@@ -3,7 +3,7 @@ CMake Warning at /usr/local/lib/cmake/libmongocxx-3.6.2/libmongocxx-config.cmake
   This CMake target is deprecated.  Use 'mongo::mongocxx_shared' instead.
   Consult the example projects for further details.
 Call Stack (most recent call first):
-  CMakeLists.txt:6 (find_package)
+  CMakeLists.txt:8 (find_package)
 
 
 CMake Warning at /usr/local/lib/cmake/libbsoncxx-3.6.2/libbsoncxx-config.cmake:15 (message):
@@ -11,14 +11,14 @@ CMake Warning at /usr/local/lib/cmake/libbsoncxx-3.6.2/libbsoncxx-config.cmake:1
   Consult the example projects for further details.
 Call Stack (most recent call first):
   /usr/local/lib/cmake/libmongocxx-3.6.2/libmongocxx-config.cmake:22 (find_package)
-  CMakeLists.txt:6 (find_package)
+  CMakeLists.txt:8 (find_package)
 
 
 CMake Warning at /usr/local/lib/cmake/libbsoncxx-3.6.2/libbsoncxx-config.cmake:15 (message):
   This CMake target is deprecated.  Use 'mongo::bsoncxx_shared' instead.
   Consult the example projects for further details.
 Call Stack (most recent call first):
-  CMakeLists.txt:7 (find_package)
+  CMakeLists.txt:9 (find_package)
 
 
 -- Configuring done

@@ -3,6 +3,8 @@ project(server)
 
 set(CMAKE_CXX_STANDARD 20)
 
+SET(CMAKE_CXX_FLAGS -pthread)
+
 find_package(libmongocxx REQUIRED)
 find_package(libbsoncxx REQUIRED)
 include_directories(${LIBMONGOCXX_INCLUDE_DIR})

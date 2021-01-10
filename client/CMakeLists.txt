@@ -18,5 +18,10 @@ if(SFML_FOUND)
     message(STATUS "SFML_VERSION: ${SFML_VERSION}")
 endif()
 
-add_executable(client main.cpp)
-target_link_libraries (client sfml-graphics sfml-window sfml-system)
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libstdc++ -static-libgcc")
+#set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "/home/flav/Documents/chess/client")
+
+set(SOURCE_FILES main.cpp)
+add_executable(client ${SOURCE_FILES})
+
+target_link_libraries(client sfml-graphics sfml-window sfml-system)

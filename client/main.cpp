@@ -15,7 +15,7 @@ sf::Texture w_pawn, b_pawn, w_king, b_king, w_queen, b_queen,
 
 sf::Cursor hand, arrow;
 
-int mousePressed = 0, screen = 1;
+int mousePressed = 0, screen = 2;
 
 struct piece {
     int type;
@@ -696,8 +696,10 @@ int main() {
 
     int sock = 0, valread;
     struct sockaddr_in serv_addr;
-    char *hello = "Hello from client";
+    string msg = "Hello from client";
+    const char *hello = msg.c_str();
     char buffer[1024] = {0};
+
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
         cout << "Socket creation error" << endl;
@@ -719,60 +721,10 @@ int main() {
         cout << "Connection failed" << endl;
         return -1;
     }
-    send(sock , hello , strlen(hello) , 0 );
-    cout << "Hello message sent" << endl;
-    valread = read( sock , buffer, 1024);
-    cout << buffer << endl;
 
-    if (screen == 0) {
-//        sf::String playerInput;
-//        sf::Text playerText;
-//        sf::Font MontserratRegular;
-//
-//        if (!MontserratRegular.loadFromFile("/home/flav/Documents/chess/client/fonts/Montserrat/Montserrat-Regular.ttf")) {
-//            cout << "error" << endl;
-//        }
-//
-//        playerText.setFont(MontserratRegular);
-//        playerText.setFillColor(sf::Color::White);
-//        playerText.setCharacterSize(24);
-//        playerText.setPosition(100, 100);
-//
-//        string letters[26] = {"a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z"};
-//
-//        btn registerBtn, loginBtn;
-//
-//        registerBtn.rect.setPosition((w/2) - 100, (h/2) - 200);
-//        registerBtn.rect
-//
-//        while (window.isOpen()) {
-//            window.clear();
-//            window.draw(playerText);
-//            sf::Event event;
-//            while (window.pollEvent(event)) {
-//                switch (event.type) {
-//                    case sf::Event::KeyPressed:
-//                        if (event.text.unicode == 59) {
-//                            if (playerInput.getSize()) {
-//                                playerInput.erase(playerInput.getSize() - 1, 1);
-//                                playerText.setString(playerInput);
-//                            }
-//                        }
-//                        else if (event.text.unicode >= 0 && event.text.unicode <= 25) {
-//                            playerInput += letters[event.text.unicode];
-//                            playerText.setString(playerInput);
-//                        }
-//                        cout << playerInput.toAnsiString() << endl;
-//                        break;
-//                    case sf::Event::Closed:
-//                        window.close();
-//                }
-//            }
-//            window.draw(playerText);
-//            window.display();
-//        }
-    }
-    else if (screen == 1) {
+    cout << "Connected" << endl;
+
+    if (screen == 1) {
 
     }
     else if (screen == 2) {
@@ -880,6 +832,10 @@ int main() {
         }
 
         while (window.isOpen()) {
+
+            if (read(sock, buffer, 1024) != -1) {
+                cout << buffer << endl;
+            }
 
             window.clear();
 
