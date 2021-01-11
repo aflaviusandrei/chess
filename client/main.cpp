@@ -6,16 +6,11 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <string.h>
+#include <poll.h>
+
 #define PORT 8888
 
 using namespace std;
-
-sf::Texture w_pawn, b_pawn, w_king, b_king, w_queen, b_queen,
-        w_rook, b_rook, w_bishop, b_bishop, w_knight, b_knight;
-
-sf::Cursor hand, arrow;
-
-int mousePressed = 0, screen = 2;
 
 struct piece {
     int type;
@@ -34,16 +29,12 @@ struct square {
     string type;
 };
 
-struct btn {
-    int x, y;
-    string type, content;
-    sf::RectangleShape rect;
-};
-
 // Basic board initialization
 
 square board[8][8];
 int i, j;
+
+int turn = 0;
 
 int w = sf::VideoMode::getDesktopMode().width,
         h = sf::VideoMode::getDesktopMode().height;
@@ -53,7 +44,44 @@ int bw = w - (0.3 * w);
 int bh = h - (0.3 * h);
 int sqh = bh / 8;
 
+string gMsg;
+
 int grabI = -1, grabJ = -1;
+
+struct btn {
+    int x, y;
+    string type, content;
+    sf::RectangleShape rect;
+};
+
+sf::Texture w_pawn, b_pawn, w_king, b_king, w_queen, b_queen,
+        w_rook, b_rook, w_bishop, b_bishop, w_knight, b_knight;
+
+sf::Cursor hand, arrow;
+
+sf::Text text;
+sf::Font montserrat;
+sf::RectangleShape rectangle(sf::Vector2f(sqh, sqh));
+
+int mousePressed = 0, screen = 1;
+
+int sock = 0, valread;
+struct sockaddr_in serv_addr;
+char buffer[1024] = {0};
+
+// Call to send move to server
+
+void sendMove (int srcX, int srcY, int destX, int destY) {
+    string msg = to_string(srcX) + to_string(srcY) + to_string(destX) + to_string(destY);
+
+    msg = "move:" + msg;
+
+    const char * bfr = msg.c_str();
+
+    send(sock, bfr, strlen(bfr), 0);
+
+    turn = 0;
+}
 
 // open window
 sf::RenderWindow window(sf::VideoMode(w, h), "Chess");
@@ -106,15 +134,11 @@ int validateQueen(int origX, int origY, int destX, int destY, int side) {
             if (cx < destX) cx++;
             else cx--;
 
-            cout << "b" << endl;
-
             if (board[cx][cy].hasPiece) {
                 cout << "Position " << cx << " " << cy << " has piece" << endl;
                 return 0;
             }
         }
-
-        cout << "a" << endl;
 
         if (cx != destX || cy != destY) return 0;
     }
@@ -661,6 +685,7 @@ void dropPiece(int mx, int my) {
             board[grabI][grabJ].sx = board[grabI][grabJ].x + ((sqh - 60) / 2);
             board[grabI][grabJ].sy = board[grabI][grabJ].y + ((sqh - 60) / 2);
         } else {
+            sendMove(grabI, grabJ, fi, fj);
             board[fi][fj].sprite.setTexture(board[grabI][grabJ].texture);
             board[fi][fj].texture = board[grabI][grabJ].texture;
             board[fi][fj].hasPiece = 1;
@@ -689,16 +714,286 @@ void initSquare(int x, int y, const sf::Texture &sprite, string type, int side, 
     board[x][y].color = color;
 }
 
+void handleResponse (string msg) {
+    cout << msg << endl;
+    if (msg == "Opponent disconnected") {
+        text.setString("Opponent disconnected");
+    }
+    else if (msg.substr(0, 4) == "move") {
+        int srcX = stoi(msg.substr(5, 1));
+        int srcY = stoi(msg.substr(6, 1));
+        int destX = stoi(msg.substr(7, 1));
+        int destY = stoi(msg.substr(8, 1));
+
+        turn = 1;
+
+        cout << srcX << srcY << destX << destY << endl;
+
+        board[0 + (7 - destX)][destY].sprite.setTexture(board[0 + (7 - srcX)][srcY].texture);
+        board[0 + (7 - destX)][destY].texture = board[0 + (7 - srcX)][srcY].texture;
+        board[0 + (7 - destX)][destY].hasPiece = 1;
+        board[0 + (7 - destX)][destY].sx = board[0 + (7 - destX)][destY].x + ((sqh - 60) / 2);
+        board[0 + (7 - destX)][destY].sy = board[0 + (7 - destX)][destY].y + ((sqh - 60) / 2);
+        board[0 + (7 - destX)][destY].type = board[0 + (7 - srcX)][srcY].type;
+        board[0 + (7 - destX)][destY].side = board[0 + (7 - srcX)][srcY].side;
+        board[0 + (7 - destX)][destY].color = board[0 + (7 - srcX)][srcY].color;
+        board[0 + (7 - srcX)][srcY].hasPiece = 0;
+        board[0 + (7 - srcX)][srcY].side = -1;
+        board[0 + (7 - srcX)][srcY].type = "";
+
+        repaint();
+    }
+}
+
+void drawGameScreen() {
+    pollfd pfd;
+
+    pfd.fd = sock;
+    pfd.events = POLLIN;
+
+    char bfr[1024] = {0};
+
+    while (window.isOpen()) {
+
+        window.clear();
+
+        text.setString(gMsg);
+        text.setPosition((w - text.getLocalBounds().width) / 2, 50);
+
+        int borw = 0;
+
+        // draw entire board
+        rectangle.setPosition(board[0][0].x, board[0][0].y);
+
+        window.draw(rectangle);
+
+        for (j = 1; j < 8; j++) {
+            rectangle.setPosition(board[0][j].x, board[0][j].y);
+
+            if (borw) rectangle.setFillColor(sf::Color(118, 150, 86));
+            else rectangle.setFillColor(sf::Color(238, 238, 210));
+
+            borw = !borw;
+
+            window.draw(rectangle);
+        }
+
+        for (i = 1; i < 8; i++) {
+            rectangle.setPosition(board[i][0].x, board[i][0].y);
+
+            window.draw(rectangle);
+            for (j = 1; j < 8; j++) {
+                rectangle.setPosition(board[i][j].x, board[i][j].y);
+
+                if (borw) rectangle.setFillColor(sf::Color(118, 150, 86));
+                else rectangle.setFillColor(sf::Color(238, 238, 210));
+
+                borw = !borw;
+
+                window.draw(rectangle);
+            }
+        }
+
+        for (i = 0; i < 8; i++)
+            for (j = 0; j < 8; j++) {
+                board[i][j].sprite.setPosition(
+                        board[i][j].sx,
+                        board[i][j].sy
+                );
+            }
+
+        for (i = 0; i < 8; i++)
+            for (j = 0; j < 8; j++) {
+                if (board[i][j].hasPiece) {
+                    window.draw(board[i][j].sprite);
+                }
+            }
+
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            switch (event.type) {
+                case sf::Event::MouseButtonPressed:
+                    repaint();
+                    mousePressed = 1;
+                    if (turn) grabPiece(sf::Mouse::getPosition(window).x, sf::Mouse::getPosition(window).y);
+                    break;
+                case sf::Event::MouseButtonReleased:
+                    if (turn) dropPiece(sf::Mouse::getPosition(window).x, sf::Mouse::getPosition(window).y);
+                    mousePressed = 0;
+                    break;
+                case sf::Event::MouseMoved:
+                    if (turn) movePiece(sf::Mouse::getPosition(window).x, sf::Mouse::getPosition(window).y);
+                    break;
+                case sf::Event::Closed:
+                    window.close();
+            }
+        }
+
+        window.draw(text);
+
+        int poll_r;
+
+        if ((poll_r = poll(&pfd, 1, 0)) != 0) {
+            if (poll_r & POLLIN) {
+                if (read(sock, bfr, 1024) != -1) {
+                    handleResponse(bfr);
+                }
+            }
+        }
+
+        window.display();
+    }
+}
+
+void initializeBoard(string side) {
+    if (side == "white") {
+        cout << "white" << endl;
+        turn = 1;
+    }
+    else cout << "black" << endl;
+
+    if (turn) {
+        gMsg = "Your turn to move";
+    }
+    else {
+        if (side == "white") {
+            gMsg = "Black's turn to move";
+        }
+        else {
+            gMsg = "White's turn to move";
+        }
+    }
+
+    text.setFont(montserrat);
+    text.setCharacterSize(40);
+    text.setFillColor(sf::Color::White);
+
+    // initalize x, y coordinates of first square
+    board[0][0].x = (w - bh) / 2;
+    board[0][0].y = 0.3 * h / 2;
+
+    w_pawn.loadFromFile("/home/flav/Documents/chess/client/assets/w_pawn.png");
+    w_king.loadFromFile("/home/flav/Documents/chess/client/assets/w_king.png");
+    w_queen.loadFromFile("/home/flav/Documents/chess/client/assets/w_queen.png");
+    w_rook.loadFromFile("/home/flav/Documents/chess/client/assets/w_rook.png");
+    w_bishop.loadFromFile("/home/flav/Documents/chess/client/assets/w_bishop.png");
+    w_knight.loadFromFile("/home/flav/Documents/chess/client/assets/w_knight.png");
+    b_pawn.loadFromFile("/home/flav/Documents/chess/client/assets/b_pawn.png");
+    b_king.loadFromFile("/home/flav/Documents/chess/client/assets/b_king.png");
+    b_queen.loadFromFile("/home/flav/Documents/chess/client/assets/b_queen.png");
+    b_rook.loadFromFile("/home/flav/Documents/chess/client/assets/b_rook.png");
+    b_bishop.loadFromFile("/home/flav/Documents/chess/client/assets/b_bishop.png");
+    b_knight.loadFromFile("/home/flav/Documents/chess/client/assets/knight.png");
+
+    // set up rectangle shape to draw board squares
+    rectangle.setFillColor(sf::Color::Black);
+    rectangle.setOutlineColor(sf::Color::Black);
+    rectangle.setOutlineThickness(2);
+
+    for (j = 1; j < 8; j++) {
+        board[0][j].x = board[0][j - 1].x + sqh;
+        board[0][j].y = board[0][j - 1].y;
+    }
+
+    for (i = 1; i < 8; i++) {
+        board[i][0].y = board[i - 1][0].y + sqh;
+        board[i][0].x = board[i - 1][0].x;
+
+        for (j = 1; j < 8; j++) {
+            board[i][j].x = board[i][j - 1].x + sqh;
+            board[i][j].y = board[i][j - 1].y;
+        }
+    }
+
+    int fc, sc;
+
+    if (side == "white") {
+        sc = 1;
+        fc = 0;
+    }
+    else {
+        sc = 0;
+        fc = 1;
+    }
+
+    if (side == "black") {
+        sc = 0;
+        fc = 1;
+    }
+    else {
+        sc = 1;
+        fc = 0;
+    }
+
+    if (side == "black") {
+        initSquare(0, 0, w_rook, "rook", 0, fc);
+        initSquare(0, 1, w_knight, "knight", 0, fc);
+        initSquare(0, 2, w_bishop, "bishop", 0, fc);
+        initSquare(0, 3, w_queen, "queen", 0, fc);
+        initSquare(0, 4, w_king, "king", 0, fc);
+        initSquare(0, 5, w_bishop, "bishop", 0, fc);
+        initSquare(0, 6, w_knight, "knight", 0, fc);
+        initSquare(0, 7, w_rook, "rook", 0, fc);
+
+        for (j = 0; j < 8; j++) {
+            initSquare(1, j, w_pawn, "pawn", 0, fc);
+        }
+    }
+    else {
+        initSquare(0, 0, b_rook, "rook", 0, fc);
+        initSquare(0, 1, b_knight, "knight", 0, fc);
+        initSquare(0, 2, b_bishop, "bishop", 0, fc);
+        initSquare(0, 3, b_queen, "queen", 0, fc);
+        initSquare(0, 4, b_king, "king", 0, fc);
+        initSquare(0, 5, b_bishop, "bishop", 0, fc);
+        initSquare(0, 6, b_knight, "knight", 0, fc);
+        initSquare(0, 7, b_rook, "rook", 0, fc);
+
+        for (j = 0; j < 8; j++) {
+            initSquare(1, j, b_pawn, "pawn", 0, fc);
+        }
+    }
+
+    if (side == "white") {
+        initSquare(7, 0, w_rook, "rook", 1, sc);
+        initSquare(7, 1, w_knight, "knight", 1, sc);
+        initSquare(7, 2, w_bishop, "bishop", 1, sc);
+        initSquare(7, 3, w_queen, "queen", 1, sc);
+        initSquare(7, 4, w_king, "king", 1, sc);
+        initSquare(7, 5, w_bishop, "bishop", 1, sc);
+        initSquare(7, 6, w_knight, "knight", 1, sc);
+        initSquare(7, 7, w_rook, "rook", 1, sc);
+
+        for (j = 0; j < 8; j++) {
+            initSquare(6, j, w_pawn, "pawn", 1, sc);
+        }
+    }
+    else {
+        initSquare(7, 0, b_rook, "rook", 1, sc);
+        initSquare(7, 1, b_knight, "knight", 1, sc);
+        initSquare(7, 2, b_bishop, "bishop", 1, sc);
+        initSquare(7, 3, b_queen, "queen", 1, sc);
+        initSquare(7, 4, b_king, "king", 1, sc);
+        initSquare(7, 5, b_bishop, "bishop", 1, sc);
+        initSquare(7, 6, b_knight, "knight", 1, sc);
+        initSquare(7, 7, b_rook, "rook", 1, sc);
+
+        for (j = 0; j < 8; j++) {
+            initSquare(6, j, b_pawn, "pawn", 1, sc);
+        }
+    }
+
+    drawGameScreen();
+}
+
 int main() {
 
     hand.loadFromSystem(sf::Cursor::Hand);
     arrow.loadFromSystem(sf::Cursor::Arrow);
 
-    int sock = 0, valread;
-    struct sockaddr_in serv_addr;
-    string msg = "Hello from client";
-    const char *hello = msg.c_str();
-    char buffer[1024] = {0};
+    if (!montserrat.loadFromFile("/home/flav/Documents/chess/client/fonts/Montserrat/Montserrat-Regular.ttf")) {
+        perror("Failed to load from file");
+    }
 
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
@@ -722,194 +1017,70 @@ int main() {
         return -1;
     }
 
+    // initialize poller to use with poll() function to check for availability of data
+    pollfd pfd;
+
+    pfd.fd = sock;
+    pfd.events = POLLIN;
+
     cout << "Connected" << endl;
 
     if (screen == 1) {
+        string msg = "Waiting for other player to connect";
 
-    }
-    else if (screen == 2) {
+        text.setString(msg);
+        text.setFont(montserrat);
+        text.setCharacterSize(40);
+        text.setFillColor(sf::Color::White);
 
-        // initalize x, y coordinates of first square
-        board[0][0].x = (w - bh) / 2;
-        board[0][0].y = 0.3 * h / 2;
+        text.setPosition((w - text.getLocalBounds().width) / 2, (h - text.getLocalBounds().height) / 2);
 
-        w_pawn.loadFromFile("/home/flav/Documents/chess/client/assets/w_pawn.png");
-        w_king.loadFromFile("/home/flav/Documents/chess/client/assets/w_king.png");
-        w_queen.loadFromFile("/home/flav/Documents/chess/client/assets/w_queen.png");
-        w_rook.loadFromFile("/home/flav/Documents/chess/client/assets/w_rook.png");
-        w_bishop.loadFromFile("/home/flav/Documents/chess/client/assets/w_bishop.png");
-        w_knight.loadFromFile("/home/flav/Documents/chess/client/assets/w_knight.png");
-        b_pawn.loadFromFile("/home/flav/Documents/chess/client/assets/b_pawn.png");
-        b_king.loadFromFile("/home/flav/Documents/chess/client/assets/b_king.png");
-        b_queen.loadFromFile("/home/flav/Documents/chess/client/assets/b_queen.png");
-        b_rook.loadFromFile("/home/flav/Documents/chess/client/assets/b_rook.png");
-        b_bishop.loadFromFile("/home/flav/Documents/chess/client/assets/b_bishop.png");
-        b_knight.loadFromFile("/home/flav/Documents/chess/client/assets/knight.png");
-
-        // set up rectangle shape to draw board squares
-        sf::RectangleShape rectangle(sf::Vector2f(sqh, sqh));
-        rectangle.setFillColor(sf::Color::Black);
-        rectangle.setOutlineColor(sf::Color::Black);
-        rectangle.setOutlineThickness(2);
-
-        for (j = 1; j < 8; j++) {
-            board[0][j].x = board[0][j - 1].x + sqh;
-            board[0][j].y = board[0][j - 1].y;
-        }
-
-        for (i = 1; i < 8; i++) {
-            board[i][0].y = board[i - 1][0].y + sqh;
-            board[i][0].x = board[i - 1][0].x;
-
-            for (j = 1; j < 8; j++) {
-                board[i][j].x = board[i][j - 1].x + sqh;
-                board[i][j].y = board[i][j - 1].y;
-            }
-        }
-
-        int fc, sc;
-
-        fc = rand() % 2;
-        if (fc) sc = 0;
-        else sc = 1;
-
-        if (fc) {
-            initSquare(0, 0, w_rook, "rook", 0, fc);
-            initSquare(0, 1, w_knight, "knight", 0, fc);
-            initSquare(0, 2, w_bishop, "bishop", 0, fc);
-            initSquare(0, 3, w_queen, "queen", 0, fc);
-            initSquare(0, 4, w_king, "king", 0, fc);
-            initSquare(0, 5, w_bishop, "bishop", 0, fc);
-            initSquare(0, 6, w_knight, "knight", 0, fc);
-            initSquare(0, 7, w_rook, "rook", 0, fc);
-
-            for (j = 0; j < 8; j++) {
-                initSquare(1, j, w_pawn, "pawn", 0, fc);
-            }
-        }
-        else {
-            initSquare(0, 0, b_rook, "rook", 0, fc);
-            initSquare(0, 1, b_knight, "knight", 0, fc);
-            initSquare(0, 2, b_bishop, "bishop", 0, fc);
-            initSquare(0, 3, b_queen, "queen", 0, fc);
-            initSquare(0, 4, b_king, "king", 0, fc);
-            initSquare(0, 5, b_bishop, "bishop", 0, fc);
-            initSquare(0, 6, b_knight, "knight", 0, fc);
-            initSquare(0, 7, b_rook, "rook", 0, fc);
-
-            for (j = 0; j < 8; j++) {
-                initSquare(1, j, b_pawn, "pawn", 0, fc);
-            }
-        }
-
-        if (sc) {
-            initSquare(7, 0, w_rook, "rook", 1, sc);
-            initSquare(7, 1, w_knight, "knight", 1, sc);
-            initSquare(7, 2, w_bishop, "bishop", 1, sc);
-            initSquare(7, 3, w_queen, "queen", 1, sc);
-            initSquare(7, 4, w_king, "king", 1, sc);
-            initSquare(7, 5, w_bishop, "bishop", 1, sc);
-            initSquare(7, 6, w_knight, "knight", 1, sc);
-            initSquare(7, 7, w_rook, "rook", 1, sc);
-
-            for (j = 0; j < 8; j++) {
-                initSquare(6, j, w_pawn, "pawn", 1, sc);
-            }
-        }
-        else {
-            initSquare(7, 0, b_rook, "rook", 1, sc);
-            initSquare(7, 1, b_knight, "knight", 1, sc);
-            initSquare(7, 2, b_bishop, "bishop", 1, sc);
-            initSquare(7, 3, b_queen, "queen", 1, sc);
-            initSquare(7, 4, b_king, "king", 1, sc);
-            initSquare(7, 5, b_bishop, "bishop", 1, sc);
-            initSquare(7, 6, b_knight, "knight", 1, sc);
-            initSquare(7, 7, b_rook, "rook", 1, sc);
-
-            for (j = 0; j < 8; j++) {
-                initSquare(6, j, b_pawn, "pawn", 1, sc);
-            }
-        }
+        sf::Clock clock, connClock;
 
         while (window.isOpen()) {
-
-            if (read(sock, buffer, 1024) != -1) {
-                cout << buffer << endl;
-            }
-
             window.clear();
 
-            int borw = 0;
-
-            // draw entire board
-            rectangle.setPosition(board[0][0].x, board[0][0].y);
-
-            window.draw(rectangle);
-
-            for (j = 1; j < 8; j++) {
-                rectangle.setPosition(board[0][j].x, board[0][j].y);
-
-                if (borw) rectangle.setFillColor(sf::Color(118, 150, 86));
-                else rectangle.setFillColor(sf::Color(238, 238, 210));
-
-                borw = !borw;
-
-                window.draw(rectangle);
+            if (clock.getElapsedTime().asMilliseconds() > 500) {
+                if (msg.substr(msg.length() - 3, msg.length()) == "...") {
+                    msg = "Waiting for other player to connect";
+                }
+                else {
+                    msg.append(".");
+                }
+                text.setPosition((w - text.getLocalBounds().width) / 2, (h - text.getLocalBounds().height) / 2);
+                text.setString(msg);
+                clock.restart();
             }
 
-            for (i = 1; i < 8; i++) {
-                rectangle.setPosition(board[i][0].x, board[i][0].y);
-
-                window.draw(rectangle);
-                for (j = 1; j < 8; j++) {
-                    rectangle.setPosition(board[i][j].x, board[i][j].y);
-
-                    if (borw) rectangle.setFillColor(sf::Color(118, 150, 86));
-                    else rectangle.setFillColor(sf::Color(238, 238, 210));
-
-                    borw = !borw;
-
-                    window.draw(rectangle);
-                }
-            }
-
-            for (i = 0; i < 8; i++)
-                for (j = 0; j < 8; j++) {
-                    board[i][j].sprite.setPosition(
-                            board[i][j].sx,
-                            board[i][j].sy
-                    );
-                }
-
-            for (i = 0; i < 8; i++)
-                for (j = 0; j < 8; j++) {
-                    if (board[i][j].hasPiece) {
-                        window.draw(board[i][j].sprite);
-                    }
-                }
+            window.draw(text);
 
             sf::Event event;
             while (window.pollEvent(event)) {
                 switch (event.type) {
-                    case sf::Event::MouseButtonPressed:
-                        repaint();
-                        mousePressed = 1;
-                        grabPiece(sf::Mouse::getPosition(window).x, sf::Mouse::getPosition(window).y);
-                        break;
-                    case sf::Event::MouseButtonReleased:
-                        dropPiece(sf::Mouse::getPosition(window).x, sf::Mouse::getPosition(window).y);
-                        mousePressed = 0;
-                        break;
-                    case sf::Event::MouseMoved:
-                        movePiece(sf::Mouse::getPosition(window).x, sf::Mouse::getPosition(window).y);
-                        break;
                     case sf::Event::Closed:
                         window.close();
                 }
             }
 
+            // Poll socket to see if another player connected
+
+            int poll_r;
+
+            if ((poll_r = poll(&pfd, 1, 0)) != 0) {
+                if (poll_r & POLLIN) {
+                    if (read(sock, buffer, 1024) != -1) {
+                        string s = buffer;
+                        if (s.substr(0, 6) == "color:") {
+                            initializeBoard(s.substr(7, s.length() - 1));
+                        }
+                    }
+                }
+            }
+
             window.display();
         }
+    }
+    else if (screen == 2) {
     }
 
     return 0;

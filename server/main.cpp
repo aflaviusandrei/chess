@@ -21,23 +21,133 @@ struct player {
     int adv_sd; // store adversary's sd
 } dummy;
 
+struct response {
+    string msg;
+    int res;
+};
+
 player waitingPlayer;
 
 // create mutually exclusive flag for multithreading
 mutex mtx;
 
-void startMatch (player p1, player p2) {
-    string bfr = "You start";
-    const char * buffer = bfr.c_str();
+response handleRequest(string msg) {
+    response res;
 
-    send(p1.sd, buffer, strlen(buffer), 0);
+    res.msg = "";
+    res.res = 0;
+
+    if (msg.substr(0, 4) == "move") {
+        res.res = 1;
+        res.msg = "move:" + msg.substr(5, 4);
+    }
+
+    return res;
+}
+
+void sendToClient(string msg, int sd) {
+    const char *buffer = msg.c_str();
+
+    send(sd, buffer, strlen(buffer), 0);
+}
+
+void matchListener(player p1, player p2) {
+    int ongoing = 1, poll_r;
+    char *buffer;
+    response res;
+
+    pollfd pfd;
+
+    pfd.events = POLLIN;
+
+    int p1d = 0, p2d = 0;
+
+    int val;
+
+    while (ongoing) {
+
+        // check if there is something to read from player 1sc
+        pfd.fd = p1.sd;
+
+        if (!p1d && !p2d) {
+            if ((poll_r = poll(&pfd, 1, 0)) != 0) {
+                if (poll_r & POLLIN) {
+                    if ((val = read(p1.sd, buffer, 1024)) != -1) {
+//                        cout << "Received from p1" << endl;
+                        if (val == 0) {
+                            cout << "p1 disconnected" << endl;
+                            p1d = 1;
+                            sendToClient("Opponent disconnected", p2.sd);
+                        } else {
+                            res = handleRequest(buffer);
+                            if (res.res) {
+                                sendToClient(res.msg, p2.sd);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // check if there is something to read from player 1
+            pfd.fd = p2.sd;
+
+            if ((poll_r = poll(&pfd, 1, 0)) != 0) {
+                if (poll_r & POLLIN) {
+                    if ((val = read(p2.sd, buffer, 1024)) != -1) {
+//                        cout << "Received from p2" << endl;
+                        if (val == 0) {
+                            cout << "p2 disconnected" << endl;
+                            p2d = 1;
+                            sendToClient("Opponent disconnected", p1.sd);
+                        } else {
+                            res = handleRequest(buffer);
+                            if (res.res) {
+                                sendToClient(res.msg, p1.sd);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+void startMatch(player p1, player p2) {
+    string bfr = "start";
+    const char *buffer = bfr.c_str();
+
+    int r = ((double) rand() / (RAND_MAX)) + 1;
+
+    if (r) {
+        bfr = "color: white";
+        buffer = bfr.c_str();
+
+        cout << "p1 is white" << endl;
+
+        send(p1.sd, buffer, strlen(buffer), 0);
+
+        bfr = "color: black";
+        buffer = bfr.c_str();
+        send(p2.sd, buffer, strlen(buffer), 0);
+    } else {
+        bfr = "color: black";
+        buffer = bfr.c_str();
+
+        cout << "p2 is white" << endl;
+
+        send(p1.sd, buffer, strlen(buffer), 0);
+
+        bfr = "color: white";
+        buffer = bfr.c_str();
+        send(p2.sd, buffer, strlen(buffer), 0);
+    }
 
     cout << "Starting match between " << p1.sd << " and " << p2.sd << endl;
 
-
+    matchListener(p1, p2);
 }
 
-void handleClient (int client) {
+void handleClient(int client) {
     cout << "New client connected: " << client << endl;
 
     // locking mtx to ensure code execution stays in single thread
@@ -45,8 +155,7 @@ void handleClient (int client) {
 
     if (waitingPlayer.sd == -1) { // no other free player found, adding this one to queue
         waitingPlayer.sd = client;
-    }
-    else { // there is already a player added so we match with him
+    } else { // there is already a player added so we match with him
         player newPlayer;
         newPlayer.sd = client;
         newPlayer.matched = 1;
@@ -68,7 +177,7 @@ void handleClient (int client) {
     mtx.unlock();
 }
 
-int main () {
+int main() {
     sockaddr_in server;
     int sock, i, val;
     char buffer[1025];
@@ -91,7 +200,7 @@ int main () {
     }
 
     // bind to socket
-    if (bind(sock, (struct sockaddr*)&server, sizeof(sockaddr)) == -1) {
+    if (bind(sock, (struct sockaddr *) &server, sizeof(sockaddr)) == -1) {
         perror("Bind to socket failure");
         return 0;
     }
@@ -104,21 +213,32 @@ int main () {
 
     int current_client;
 
+    // initialize poller to use with poll() function to check for availability of data
+    pollfd pfd;
+
+    pfd.events = POLLIN;
+
     while (true) {
-        if((current_client = accept(sock, nullptr, nullptr)) == -1) {
+        if ((current_client = accept(sock, nullptr, nullptr)) == -1) {
             perror("Error while accepting clients");
-        }
-        else {
+        } else {
+
+            // Check if player from queue disconnected in the meantime
+            if (waitingPlayer.sd != -1) {
+                int poll_r;
+                pfd.fd = waitingPlayer.sd;
+                if ((poll_r = poll(&pfd, 1, 0)) != 0) {
+                    read(sock, buffer, 1024);
+
+                    if (strlen(buffer) == 0) {
+                        waitingPlayer.sd = -1;
+                        close(waitingPlayer.sd);
+                    }
+                }
+            }
+
             handleClient(current_client);
         }
-
-        // check if client in queue is still connected
-
-//        if ((val = read(waitingPlayer.sd, buffer, 1024)) == 0) { // player in queue disconnected, remove from queue
-//            cout << "Removing player " << waitingPlayer.sd << " from queue" << endl;
-//            close(waitingPlayer.sd);
-//            waitingPlayer.sd = -1;
-//        }
     }
 
     return 0;
