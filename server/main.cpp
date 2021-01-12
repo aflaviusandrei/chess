@@ -28,6 +28,8 @@ struct response {
 
 player waitingPlayer;
 
+int ongoing, poll_r;
+
 // create mutually exclusive flag for multithreading
 mutex mtx;
 
@@ -41,6 +43,11 @@ response handleRequest(string msg) {
         res.res = 1;
         res.msg = "move:" + msg.substr(5, 4);
     }
+    else if (msg.substr(0, 9) == "checkmate") {
+        ongoing = 0;
+        res.msg = "checkmate";
+        res.res = 1;
+    }
 
     return res;
 }
@@ -52,7 +59,7 @@ void sendToClient(string msg, int sd) {
 }
 
 void matchListener(player p1, player p2) {
-    int ongoing = 1, poll_r;
+    ongoing = 1;
     char *buffer;
     response res;
 
@@ -76,8 +83,10 @@ void matchListener(player p1, player p2) {
 //                        cout << "Received from p1" << endl;
                         if (val == 0) {
                             cout << "p1 disconnected" << endl;
+                            close(p1.sd);
                             p1d = 1;
                             sendToClient("Opponent disconnected", p2.sd);
+                            close(p2.sd);
                         } else {
                             res = handleRequest(buffer);
                             if (res.res) {
@@ -97,8 +106,10 @@ void matchListener(player p1, player p2) {
 //                        cout << "Received from p2" << endl;
                         if (val == 0) {
                             cout << "p2 disconnected" << endl;
+                            close(p2.sd);
                             p2d = 1;
                             sendToClient("Opponent disconnected", p1.sd);
+                            close(p1.sd);
                         } else {
                             res = handleRequest(buffer);
                             if (res.res) {

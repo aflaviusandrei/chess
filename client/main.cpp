@@ -35,6 +35,7 @@ square board[8][8];
 int i, j;
 
 int turn = 0;
+int finished = 0;
 
 int w = sf::VideoMode::getDesktopMode().width,
         h = sf::VideoMode::getDesktopMode().height;
@@ -44,7 +45,10 @@ int bw = w - (0.3 * w);
 int bh = h - (0.3 * h);
 int sqh = bh / 8;
 
+square bc[8][8];
+
 string gMsg;
+string color;
 
 int grabI = -1, grabJ = -1;
 
@@ -72,6 +76,9 @@ char buffer[1024] = {0};
 // Call to send move to server
 
 void sendMove (int srcX, int srcY, int destX, int destY) {
+    if (color == "white") gMsg = "Black's turn to move";
+    else gMsg = "White's turn to move";
+
     string msg = to_string(srcX) + to_string(srcY) + to_string(destX) + to_string(destY);
 
     msg = "move:" + msg;
@@ -83,8 +90,319 @@ void sendMove (int srcX, int srcY, int destX, int destY) {
     turn = 0;
 }
 
+void sendCheckMate () {
+    string msg = "checkmate";
+
+    const char * bfr = msg.c_str();
+
+    send(sock, bfr, strlen(bfr), 0);
+}
+
 // open window
 sf::RenderWindow window(sf::VideoMode(w, h), "Chess");
+
+int isCheck(square b[8][8]) {
+    int ti, tj;
+
+    struct king {
+        int i, j, side;
+    } k[2];
+
+    for (i = 0; i < 8; i++)
+        for (j = 0; j < 8; j++) {
+            if (b[i][j].hasPiece && b[i][j].type == "king") {
+                if (b[i][j].side) {
+                    k[0].i = i;
+                    k[0].j = j;
+                    k[0].side = b[i][j].side;
+                } else {
+                    k[1].i = i;
+                    k[1].j = j;
+                    k[1].side = b[i][j].side;
+                }
+            }
+        }
+
+    // Horizontally and vertically check for rooks and queens
+    for (int x = 0; x < 2; x++) {
+        // check north
+        ti = k[x].i - 1;
+        if (ti >= 0) {
+            while (!b[ti][k[x].j].hasPiece && ti > 0) ti--;
+            if ((b[ti][k[x].j].type == "queen" || b[ti][k[x].j].type == "rook")
+                && b[ti][k[x].j].side != k[x].side) return k[x].side;
+        }
+
+        // check south
+        ti = k[x].i + 1;
+        if (ti <= 7) {
+            while (!b[ti][k[x].j].hasPiece && ti < 7) ti++;
+            if ((b[ti][k[x].j].type == "queen" || b[ti][k[x].j].type == "rook")
+                && b[ti][k[x].j].side != k[x].side) return k[x].side;
+        }
+
+        // check east
+        tj = k[x].j + 1;
+        if (tj <= 7) {
+            while (!b[k[x].i][tj].hasPiece && tj < 7) tj++;
+            if ((b[k[x].i][tj].type == "queen" || b[k[x].i][tj].type == "rook")
+                && b[k[x].i][tj].side != k[x].side) return k[x].side;
+        }
+
+        // check west
+        tj = k[x].j - 1;
+        if (tj >= 0) {
+            while (!b[k[x].i][tj].hasPiece && tj > 0) tj--;
+            if ((b[k[x].i][tj].type == "queen" || b[k[x].i][tj].type == "rook")
+                && b[k[x].i][tj].side != k[x].side) return k[x].side;
+        }
+    }
+
+    // Check for bishops and queens
+
+    for (int x = 0; x < 2; x++) {
+        // check northeast
+        ti = k[x].i - 1;
+        tj = k[x].j + 1;
+        if (ti >= 0 && ti <= 7 && tj >= 0 && tj <= 7) {
+            while (ti > 0 && tj < 7 && !b[ti][tj].hasPiece) {
+                ti--;
+                tj++;
+            }
+
+            if (b[ti][tj].hasPiece) {
+                if ((b[ti][tj].type == "queen" || b[ti][tj].type == "bishop") && b[ti][tj].side != b[k[x].i][k[x].j].side) return k[x].side;
+            }
+        }
+
+        // check northwest
+        ti = k[x].i - 1;
+        tj = k[x].j - 1;
+
+        if (ti >= 0 && ti <= 7 && tj >= 0 && tj <= 7) {
+            while (ti > 0 && tj > 0 && !b[ti][tj].hasPiece) {
+                ti--;
+                tj--;
+            }
+
+            if (b[ti][tj].hasPiece) {
+                if ((b[ti][tj].type == "queen" || b[ti][tj].type == "bishop") && b[ti][tj].side != b[k[x].i][k[x].j].side) return k[x].side;
+            }
+        }
+
+        // check southeast
+        ti = k[x].i + 1;
+        tj = k[x].j + 1;
+
+        if (ti >= 0 && ti <= 7 && tj >= 0 && tj <= 7) {
+            while (ti < 7 && tj < 7 && !b[ti][tj].hasPiece) {
+                ti++;
+                tj++;
+            }
+
+            if (b[ti][tj].hasPiece) {
+                if ((b[ti][tj].type == "queen" || b[ti][tj].type == "bishop") && b[ti][tj].side != b[k[x].i][k[x].j].side) return k[x].side;
+            }
+        }
+
+        // check southwest
+        ti = k[x].i + 1;
+        tj = k[x].j - 1;
+
+        if (ti >= 0 && ti <= 7 && tj >= 0 && tj <= 7) {
+            while (ti < 7 && tj > 0 && !b[ti][tj].hasPiece) {
+                ti++;
+                tj--;
+            }
+
+            if (b[ti][tj].hasPiece) {
+                if ((b[ti][tj].type == "queen" || b[ti][tj].type == "bishop") && b[ti][tj].side != b[k[x].i][k[x].j].side) return k[x].side;
+            }
+        }
+    }
+
+    // check for pawns
+    for (int x = 0; x < 2; x++) {
+        ti = k[x].i;
+        tj = k[x].j;
+        if (k[x].side) {
+            if ((b[ti - 1][tj - 1].hasPiece && b[ti - 1][tj - 1].type == "pawn" && b[ti - 1][tj - 1].side != b[ti][tj].side)
+                || (b[ti - 1][tj + 1].hasPiece && b[ti - 1][tj + 1].type == "pawn" && b[ti - 1][tj + 1].side != b[ti][tj].side)) return k[x].side;
+        }
+        else {
+            if ((b[ti + 1][tj - 1].hasPiece && b[ti + 1][tj - 1].type == "pawn" && b[ti + 1][tj - 1].side != b[ti][tj].side)
+                || (b[ti + 1][tj + 1].hasPiece && b[ti + 1][tj + 1].type == "pawn" && b[ti + 1][tj + 1].side != b[ti][tj].side)) return k[x].side;
+        }
+    }
+
+    // check for knights
+
+    for (int x = 0; x < 2; x++) {
+        ti = k[x].i;
+        tj = k[x].j;
+        ti--;
+        tj -= 2;
+        if (ti >= 0 && ti <= 7 && tj >= 0 && tj <= 7) {
+            if (b[ti][tj].hasPiece && b[ti][tj].type == "knight"
+                && b[ti][tj].side != b[k[x].i][k[x].j].side)
+                return k[x].side;
+        }
+
+        ti = k[x].i;
+        tj = k[x].j;
+        ti--;
+        tj += 2;
+        if (ti >= 0 && ti <= 7 && tj >= 0 && tj <= 7) {
+            if (b[ti][tj].hasPiece && b[ti][tj].type == "knight"
+                && b[ti][tj].side != b[k[x].i][k[x].j].side)
+                return k[x].side;
+        }
+
+        ti = k[x].i;
+        tj = k[x].j;
+        ti++;
+        tj -= 2;
+        if (ti >= 0 && ti <= 7 && tj >= 0 && tj <= 7) {
+            if (b[ti][tj].hasPiece && b[ti][tj].type == "knight"
+                && b[ti][tj].side != b[k[x].i][k[x].j].side)
+                return k[x].side;
+        }
+
+        ti = k[x].i;
+        tj = k[x].j;
+        ti++;
+        tj += 2;
+        if (ti >= 0 && ti <= 7 && tj >= 0 && tj <= 7) {
+            if (b[ti][tj].hasPiece && b[ti][tj].type == "knight"
+                && b[ti][tj].side != b[k[x].i][k[x].j].side)
+                return k[x].side;
+        }
+
+        ti = k[x].i;
+        tj = k[x].j;
+        ti -= 2;
+        tj--;
+        if (ti >= 0 && ti <= 7 && tj >= 0 && tj <= 7) {
+            if (b[ti][tj].hasPiece && b[ti][tj].type == "knight"
+                && b[ti][tj].side != b[k[x].i][k[x].j].side)
+                return k[x].side;
+        }
+
+        ti = k[x].i;
+        tj = k[x].j;
+        ti += 2;
+        tj--;
+        if (ti >= 0 && ti <= 7 && tj >= 0 && tj <= 7) {
+            if (b[ti][tj].hasPiece && b[ti][tj].type == "knight"
+                && b[ti][tj].side != b[k[x].i][k[x].j].side)
+                return k[x].side;
+        }
+
+        ti = k[x].i;
+        tj = k[x].j;
+        ti -= 2;
+        tj++;
+        if (ti >= 0 && ti <= 7 && tj >= 0 && tj <= 7) {
+            if (b[ti][tj].hasPiece && b[ti][tj].type == "knight"
+                && b[ti][tj].side != b[k[x].i][k[x].j].side)
+                return k[x].side;
+        }
+
+        ti = k[x].i;
+        tj = k[x].j;
+        ti += 2;
+        tj++;
+        if (ti >= 0 && ti <= 7 && tj >= 0 && tj <= 7) {
+            if (b[ti][tj].hasPiece && b[ti][tj].type == "knight"
+                && b[ti][tj].side != b[k[x].i][k[x].j].side)
+                return k[x].side;
+        }
+    }
+
+    // check for kings
+
+//    if (abs(k[0].i - k[1].i) <= 1 && abs(k[0].j - k[1].j) <= 1) return 1;
+
+    return -1;
+}
+
+void copyBoard() {
+    for (i = 0; i < 8; i++)
+        for (j = 0; j < 8; j++) bc[i][j] = board[i][j];
+}
+
+int isCheckMate(int side) {
+
+    int kx, ky, iscm = 0;
+
+    for (i = 0; i < 7; i++)
+        for (j = 0; j < 7; j++) {
+            if (board[i][j].type == "king" && board[i][j].side == side) {
+                kx = i;
+                ky = j;
+            }
+        }
+
+    int tx, ty;
+
+    if (kx > 0 && kx < 7 && ky > 0 && ky < 7) {
+        tx = kx - 1;
+        ty = ky;
+
+        if (board[tx][ty].hasPiece) {
+            if (board[tx][ty].side != side) {
+                if (board[tx][ty].type == "queen" ||
+                    board[tx][ty].type == "rook") {
+                    iscm = 1;
+                }
+            }
+        }
+    }
+
+    if (kx > 0 && kx < 7 && ky > 0 && ky < 7) {
+        tx = kx + 1;
+        ty = ky;
+
+        if (board[tx][ty].hasPiece) {
+            if (board[tx][ty].side != side) {
+                if (board[tx][ty].type == "queen" ||
+                    board[tx][ty].type == "rook") {
+                    iscm = 1;
+                }
+            }
+        }
+    }
+
+    if (kx > 0 && kx < 7 && ky > 0 && ky < 7) {
+        tx = kx;
+        ty = ky + 1;
+
+        if (board[tx][ty].hasPiece) {
+            if (board[tx][ty].side != side) {
+                if (board[tx][ty].type == "queen" ||
+                    board[tx][ty].type == "rook") {
+                    iscm = 1;
+                }
+            }
+        }
+    }
+
+    if (kx > 0 && kx < 7 && ky > 0 && ky < 7) {
+        tx = kx;
+        ty = ky - 1;
+
+        if (board[tx][ty].hasPiece) {
+            if (board[tx][ty].side != side) {
+                if (board[tx][ty].type == "queen" ||
+                    board[tx][ty].type == "rook") {
+                    iscm = 1;
+                }
+            }
+        }
+    }
+
+    return iscm;
+}
 
 int validatePawn(int origX, int origY, int destX, int destY, int side) {
     if (!side) {
@@ -287,231 +605,6 @@ int validateRook (int origX, int origY, int destX, int destY, int side) {
     return 1;
 }
 
-int isCheck() {
-    int ti, tj;
-
-    struct king {
-        int i, j, side;
-    } k[2];
-
-    for (i = 0; i < 8; i++)
-        for (j = 0; j < 8; j++) {
-            if (board[i][j].hasPiece && board[i][j].type == "king") {
-                if (board[i][j].side) {
-                    k[0].i = i;
-                    k[0].j = j;
-                    k[0].side = board[i][j].side;
-                } else {
-                    k[1].i = i;
-                    k[1].j = j;
-                    k[1].side = board[i][j].side;
-                }
-            }
-        }
-
-    // Horizontally and vertically check for rooks and queens
-    for (int x = 0; x < 2; x++) {
-        // check north
-        ti = k[x].i - 1;
-        if (ti >= 0) {
-            while (!board[ti][k[x].j].hasPiece && ti > 0) ti--;
-            if ((board[ti][k[x].j].type == "queen" || board[ti][k[x].j].type == "rook")
-                && board[ti][k[x].j].side != k[x].side) return k[x].side;
-        }
-
-        // check south
-        ti = k[x].i + 1;
-        if (ti <= 7) {
-            while (!board[ti][k[x].j].hasPiece && ti < 7) ti++;
-            if ((board[ti][k[x].j].type == "queen" || board[ti][k[x].j].type == "rook")
-                && board[ti][k[x].j].side != k[x].side) return k[x].side;
-        }
-
-        // check east
-        tj = k[x].j + 1;
-        if (tj <= 7) {
-            while (!board[k[x].i][tj].hasPiece && tj < 7) tj++;
-            if ((board[k[x].i][tj].type == "queen" || board[k[x].i][tj].type == "rook")
-                && board[k[x].i][tj].side != k[x].side) return k[x].side;
-        }
-
-        // check west
-        tj = k[x].j - 1;
-        if (tj >= 0) {
-            while (!board[k[x].i][tj].hasPiece && tj > 0) tj--;
-            if ((board[k[x].i][tj].type == "queen" || board[k[x].i][tj].type == "rook")
-                && board[k[x].i][tj].side != k[x].side) return k[x].side;
-        }
-    }
-
-    // Check for bishops and queens
-
-    for (int x = 0; x < 2; x++) {
-        // check northeast
-        ti = k[x].i - 1;
-        tj = k[x].j + 1;
-        if (ti >= 0 && ti <= 7 && tj >= 0 && tj <= 7) {
-            while (ti > 0 && tj < 7 && !board[ti][tj].hasPiece) {
-                ti--;
-                tj++;
-            }
-
-            if (board[ti][tj].hasPiece) {
-                if ((board[ti][tj].type == "queen" || board[ti][tj].type == "bishop") && board[ti][tj].side != board[k[x].i][k[x].j].side) return k[x].side;
-            }
-        }
-
-        // check northwest
-        ti = k[x].i - 1;
-        tj = k[x].j - 1;
-
-        if (ti >= 0 && ti <= 7 && tj >= 0 && tj <= 7) {
-            while (ti > 0 && tj > 0 && !board[ti][tj].hasPiece) {
-                ti--;
-                tj--;
-            }
-
-            if (board[ti][tj].hasPiece) {
-                if ((board[ti][tj].type == "queen" || board[ti][tj].type == "bishop") && board[ti][tj].side != board[k[x].i][k[x].j].side) return k[x].side;
-            }
-        }
-
-        // check southeast
-        ti = k[x].i + 1;
-        tj = k[x].j + 1;
-
-        if (ti >= 0 && ti <= 7 && tj >= 0 && tj <= 7) {
-            while (ti < 7 && tj < 7 && !board[ti][tj].hasPiece) {
-                ti++;
-                tj++;
-            }
-
-            if (board[ti][tj].hasPiece) {
-                if ((board[ti][tj].type == "queen" || board[ti][tj].type == "bishop") && board[ti][tj].side != board[k[x].i][k[x].j].side) return k[x].side;
-            }
-        }
-
-        // check southwest
-        ti = k[x].i + 1;
-        tj = k[x].j - 1;
-
-        if (ti >= 0 && ti <= 7 && tj >= 0 && tj <= 7) {
-            while (ti < 7 && tj > 0 && !board[ti][tj].hasPiece) {
-                ti++;
-                tj--;
-            }
-
-            if (board[ti][tj].hasPiece) {
-                if ((board[ti][tj].type == "queen" || board[ti][tj].type == "bishop") && board[ti][tj].side != board[k[x].i][k[x].j].side) return k[x].side;
-            }
-        }
-    }
-
-    // check for pawns
-    for (int x = 0; x < 2; x++) {
-        ti = k[x].i;
-        tj = k[x].j;
-        if (k[x].side) {
-            if ((board[ti - 1][tj - 1].hasPiece && board[ti - 1][tj - 1].type == "pawn" && board[ti - 1][tj - 1].side != board[ti][tj].side)
-                || (board[ti - 1][tj + 1].hasPiece && board[ti - 1][tj + 1].type == "pawn" && board[ti - 1][tj + 1].side != board[ti][tj].side)) return k[x].side;
-        }
-        else {
-            if ((board[ti + 1][tj - 1].hasPiece && board[ti + 1][tj - 1].type == "pawn" && board[ti + 1][tj - 1].side != board[ti][tj].side)
-                || (board[ti + 1][tj + 1].hasPiece && board[ti + 1][tj + 1].type == "pawn" && board[ti + 1][tj + 1].side != board[ti][tj].side)) return k[x].side;
-        }
-    }
-
-    // check for knights
-
-    for (int x = 0; x < 2; x++) {
-        ti = k[x].i;
-        tj = k[x].j;
-        ti--;
-        tj -= 2;
-        if (ti >= 0 && ti <= 7 && tj >= 0 && tj <= 7) {
-            if (board[ti][tj].hasPiece && board[ti][tj].type == "knight"
-                && board[ti][tj].side != board[k[x].i][k[x].j].side)
-                return k[x].side;
-        }
-
-        ti = k[x].i;
-        tj = k[x].j;
-        ti--;
-        tj += 2;
-        if (ti >= 0 && ti <= 7 && tj >= 0 && tj <= 7) {
-            if (board[ti][tj].hasPiece && board[ti][tj].type == "knight"
-                && board[ti][tj].side != board[k[x].i][k[x].j].side)
-                return k[x].side;
-        }
-
-        ti = k[x].i;
-        tj = k[x].j;
-        ti++;
-        tj -= 2;
-        if (ti >= 0 && ti <= 7 && tj >= 0 && tj <= 7) {
-            if (board[ti][tj].hasPiece && board[ti][tj].type == "knight"
-                && board[ti][tj].side != board[k[x].i][k[x].j].side)
-                return k[x].side;
-        }
-
-        ti = k[x].i;
-        tj = k[x].j;
-        ti++;
-        tj += 2;
-        if (ti >= 0 && ti <= 7 && tj >= 0 && tj <= 7) {
-            if (board[ti][tj].hasPiece && board[ti][tj].type == "knight"
-                && board[ti][tj].side != board[k[x].i][k[x].j].side)
-                return k[x].side;
-        }
-
-        ti = k[x].i;
-        tj = k[x].j;
-        ti -= 2;
-        tj--;
-        if (ti >= 0 && ti <= 7 && tj >= 0 && tj <= 7) {
-            if (board[ti][tj].hasPiece && board[ti][tj].type == "knight"
-                && board[ti][tj].side != board[k[x].i][k[x].j].side)
-                return k[x].side;
-        }
-
-        ti = k[x].i;
-        tj = k[x].j;
-        ti += 2;
-        tj--;
-        if (ti >= 0 && ti <= 7 && tj >= 0 && tj <= 7) {
-            if (board[ti][tj].hasPiece && board[ti][tj].type == "knight"
-                && board[ti][tj].side != board[k[x].i][k[x].j].side)
-                return k[x].side;
-        }
-
-        ti = k[x].i;
-        tj = k[x].j;
-        ti -= 2;
-        tj++;
-        if (ti >= 0 && ti <= 7 && tj >= 0 && tj <= 7) {
-            if (board[ti][tj].hasPiece && board[ti][tj].type == "knight"
-                && board[ti][tj].side != board[k[x].i][k[x].j].side)
-                return k[x].side;
-        }
-
-        ti = k[x].i;
-        tj = k[x].j;
-        ti += 2;
-        tj++;
-        if (ti >= 0 && ti <= 7 && tj >= 0 && tj <= 7) {
-            if (board[ti][tj].hasPiece && board[ti][tj].type == "knight"
-                && board[ti][tj].side != board[k[x].i][k[x].j].side)
-                return k[x].side;
-        }
-    }
-
-    // check for kings
-
-//    if (abs(k[0].i - k[1].i) <= 1 && abs(k[0].j - k[1].j) <= 1) return 1;
-
-    return -1;
-}
-
 void repaint () {
     for (i = 0; i < 8; i++)
         for (j = 0; j < 8; j++) {
@@ -590,7 +683,7 @@ void grabPiece(int mx, int my) {
             }
         }
 
-    if (!board[grabI][grabJ].hasPiece) {
+    if (!board[grabI][grabJ].hasPiece || board[grabI][grabJ].side != 1) {
         grabI = -1;
         grabJ = -1;
         mousePressed = 0;
@@ -667,10 +760,12 @@ void dropPiece(int mx, int my) {
             board[grabI][grabJ].side = -1;
             board[grabI][grabJ].type = "";
 
-            int isc = isCheck();
+            int isc = isCheck(board);
 
             if (isc != -1) {
-                if (isc == board[fi][fj].side) valid = 0;
+                if (isc == board[fi][fj].side) {
+                    valid = 0;
+                }
             }
 
             board[grabI][grabJ].hasPiece = 1;
@@ -717,9 +812,11 @@ void initSquare(int x, int y, const sf::Texture &sprite, string type, int side, 
 void handleResponse (string msg) {
     cout << msg << endl;
     if (msg == "Opponent disconnected") {
-        text.setString("Opponent disconnected");
+        gMsg = "Opponent disconnected";
     }
     else if (msg.substr(0, 4) == "move") {
+        gMsg = "Your turn to move";
+
         int srcX = stoi(msg.substr(5, 1));
         int srcY = stoi(msg.substr(6, 1));
         int destX = stoi(msg.substr(7, 1));
@@ -741,7 +838,24 @@ void handleResponse (string msg) {
         board[0 + (7 - srcX)][srcY].side = -1;
         board[0 + (7 - srcX)][srcY].type = "";
 
+        int iscm;
+
+        if (board[0 + (7 - srcX)][srcY].side) iscm = isCheckMate(0);
+        else iscm = isCheckMate(1);
+
+        if (iscm) {
+            sendCheckMate();
+            finished = 1;
+            gMsg = "Checkmate! You lost!";
+        }
+
+        cout << "Is check mate: " << iscm << endl;
+
         repaint();
+    }
+    else if (msg.substr(0, 9) == "checkmate") {
+        gMsg = "Checkmate! You win!";
+        finished = 1;
     }
 }
 
@@ -815,14 +929,14 @@ void drawGameScreen() {
                 case sf::Event::MouseButtonPressed:
                     repaint();
                     mousePressed = 1;
-                    if (turn) grabPiece(sf::Mouse::getPosition(window).x, sf::Mouse::getPosition(window).y);
+                    if (turn && !finished) grabPiece(sf::Mouse::getPosition(window).x, sf::Mouse::getPosition(window).y);
                     break;
                 case sf::Event::MouseButtonReleased:
-                    if (turn) dropPiece(sf::Mouse::getPosition(window).x, sf::Mouse::getPosition(window).y);
+                    if (turn && !finished) dropPiece(sf::Mouse::getPosition(window).x, sf::Mouse::getPosition(window).y);
                     mousePressed = 0;
                     break;
                 case sf::Event::MouseMoved:
-                    if (turn) movePiece(sf::Mouse::getPosition(window).x, sf::Mouse::getPosition(window).y);
+                    if (turn && !finished) movePiece(sf::Mouse::getPosition(window).x, sf::Mouse::getPosition(window).y);
                     break;
                 case sf::Event::Closed:
                     window.close();
@@ -846,11 +960,15 @@ void drawGameScreen() {
 }
 
 void initializeBoard(string side) {
+    color = side;
+
     if (side == "white") {
         cout << "white" << endl;
         turn = 1;
     }
-    else cout << "black" << endl;
+    else {
+        cout << "black" << endl;
+    }
 
     if (turn) {
         gMsg = "Your turn to move";
