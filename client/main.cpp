@@ -343,6 +343,8 @@ int isCheckMate(int side) {
             }
         }
 
+    cout << "King found at position: " << kx << " " << ky << endl;
+
     int tx, ty;
 
     if (kx > 0 && kx < 7 && ky > 0 && ky < 7) {
@@ -350,6 +352,7 @@ int isCheckMate(int side) {
         ty = ky;
 
         if (board[tx][ty].hasPiece) {
+            cout << "square next to " << color << " has piece of type " << board[tx][ty].type << endl;
             if (board[tx][ty].side != side) {
                 if (board[tx][ty].type == "queen" ||
                     board[tx][ty].type == "rook") {
@@ -364,6 +367,7 @@ int isCheckMate(int side) {
         ty = ky;
 
         if (board[tx][ty].hasPiece) {
+            cout << "square next to " << color << " has piece of type " << board[tx][ty].type << endl;
             if (board[tx][ty].side != side) {
                 if (board[tx][ty].type == "queen" ||
                     board[tx][ty].type == "rook") {
@@ -378,6 +382,7 @@ int isCheckMate(int side) {
         ty = ky + 1;
 
         if (board[tx][ty].hasPiece) {
+            cout << "square next to " << color << " has piece of type " << board[tx][ty].type << endl;
             if (board[tx][ty].side != side) {
                 if (board[tx][ty].type == "queen" ||
                     board[tx][ty].type == "rook") {
@@ -392,6 +397,7 @@ int isCheckMate(int side) {
         ty = ky - 1;
 
         if (board[tx][ty].hasPiece) {
+            cout << "square next to " << color << " has piece of type " << board[tx][ty].type << endl;
             if (board[tx][ty].side != side) {
                 if (board[tx][ty].type == "queen" ||
                     board[tx][ty].type == "rook") {
@@ -840,8 +846,8 @@ void handleResponse (string msg) {
 
         int iscm;
 
-        if (board[0 + (7 - srcX)][srcY].side) iscm = isCheckMate(0);
-        else iscm = isCheckMate(1);
+        if (board[0 + (7 - srcX)][srcY].side) iscm = isCheckMate(1);
+        else iscm = isCheckMate(0);
 
         if (iscm) {
             sendCheckMate();
